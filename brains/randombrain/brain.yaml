@@ -1,0 +1,4 @@
+id: randombrain
+name: Random Brain
+start: random.py
+stop: cmd.kill

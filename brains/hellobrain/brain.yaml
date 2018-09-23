@@ -1,0 +1,4 @@
+id: hellobrain
+name: Simple Hello Brain
+start: python3 hello.py
+stop: cmd.kill
