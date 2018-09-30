@@ -3,50 +3,111 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"html"
 	"log"
 	"net/http"
 	"os"
-
-	"github.com/julienschmidt/httprouter"
 )
 
-var brains *Brains
-var brainmanager *BrainManager
-
 func main() {
-	brains = new(Brains)
+	server := NewIgorServer()
+	server.run()
+}
+
+type IgorServer struct {
+	clients    map[*IgorClient]bool
+	register   chan *IgorClient
+	unregister chan *IgorClient
+	incoming   chan *IgorServerMsg
+
+	router       *http.ServeMux
+	brains       *Brains
+	brainmanager *BrainManager
+}
+
+func NewIgorServer() *IgorServer {
+	brains := new(Brains)
 	err := brains.Initialise()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	brainmanager = new(BrainManager)
+	brainmanager := new(BrainManager)
 	err = brainmanager.Initialise(brains)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	router := httprouter.New()
-	router.GET("/brains", getBrains)
-	router.POST("/brain/:brainid", getBrain)
-	router.NotFound = http.FileServer(http.Dir("static"))
-	log.Fatal(http.ListenAndServe(":8080", router))
-
+	return &IgorServer{
+		clients:      make(map[*IgorClient]bool),
+		register:     make(chan *IgorClient),
+		unregister:   make(chan *IgorClient),
+		incoming:     make(chan *IgorServerMsg),
+		brains:       brains,
+		brainmanager: brainmanager,
+	}
 }
 
-func index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
+func (s *IgorServer) run() {
+	go s.startServer()
+	for {
+		select {
+		case client := <-s.register:
+			s.clients[client] = true
+		case client := <-s.unregister:
+			if _, ok := s.clients[client]; ok {
+				delete(s.clients, client)
+				close(client.sendChan)
+			}
+		case message := <-s.incoming:
+			// Process Message here
+			fmt.Printf("%+v\n", message)
+			// for client := range s.clients {
+			// 	select {
+			// 	case client.send <- message:
+			// 	default:
+			// 		close(client.send)
+			// 		delete(s.clients, client)
+			// 	}
+			// }
+		}
+	}
 }
 
-func getBrains(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (s *IgorServer) startServer() {
+	s.router = http.NewServeMux()
+	s.router.HandleFunc("/config", s.getConfig)
+	s.router.Handle("/", http.FileServer(http.Dir("static")))
+	s.router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		servews(s, w, r)
+	})
+
+	fmt.Println("Listening on 8080")
+	err := http.ListenAndServe(":8080", s.router)
+	if err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
+}
+
+func (s *IgorServer) getConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(brains)
+	config := new(Config)
+	config.WebSocket = "ws://" + r.Host + "/ws"
+	json.NewEncoder(w).Encode(config)
 }
 
-func getBrain(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	brainid := ps.ByName("brainid")
-	fmt.Fprintf(w, "BRAIN! %q", html.EscapeString(brains.Brains[brainid].Start))
+type Config struct {
+	WebSocket string `json:"websocket"`
+}
+
+type IgorMsg struct {
+	Command  string            `json:"cmd"`
+	Args     map[string]string `json:"args,omitempty"`
+	Response interface{}       `json:"resp,omitempty"`
+}
+
+type IgorServerMsg struct {
+	client  *IgorClient
+	message IgorMsg
 }

@@ -19,10 +19,10 @@ type Brains struct {
 
 // Brain is a template for starting and stopping a brain
 type Brain struct {
-	ID    string `yaml:"id",json:"id"`
-	Name  string `yaml:"name",json:"name"`
-	Start string `yaml:"start",json:"start"`
-	Stop  string `yaml:"stop",json:"stop"`
+	ID    string `yaml:"id" json:"id"`
+	Name  string `yaml:"name" json:"name"`
+	Start string `yaml:"start" json:"start"`
+	Stop  string `yaml:"stop" json:"stop"`
 }
 
 // Initialise the brains
