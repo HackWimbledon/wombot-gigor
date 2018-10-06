@@ -102,14 +102,6 @@ func (c *IgorClient) writePump() {
 	}
 }
 
-func newIgorMsg(cmd string, args map[string]string, response interface{}) *IgorMsg {
-	igormsg := new(IgorMsg)
-	igormsg.Command = cmd
-	igormsg.Args = args
-	igormsg.Response = response
-	return igormsg
-}
-
 func servews(s *IgorServer, w http.ResponseWriter, r *http.Request) {
 	fmt.Println("In ws")
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -124,54 +116,3 @@ func servews(s *IgorServer, w http.ResponseWriter, r *http.Request) {
 	go client.readPump()
 	go client.writePump()
 }
-
-// 	ticker := time.NewTicker(time.Second)
-// 	defer func() {
-// 		fmt.Println("Deferred ticker close")
-// 		ticker.Stop()
-// 		conn.Close()
-// 	}()
-
-// 	go func() {
-// 		for {
-// 			igormsg := new(IgorMsg)
-// 			err := conn.ReadJSON(&igormsg)
-// 			if err != nil {
-// 				log.Println("read:", err)
-// 				if websocket.IsCloseError(err, 1006) {
-// 					fmt.Println("Closing reader")
-// 					s.Closing = true
-// 					break
-// 				}
-// 			} else {
-// 				fmt.Printf("Read: %+v\n", igormsg)
-// 				s.readChan <- igormsg
-// 			}
-// 		}
-// 	}()
-
-// out:
-// 	for {
-// 		select {
-// 		case msg := <-s.writeChan:
-// 			if s.Closing {
-// 				break out
-// 			}
-// 			err := conn.WriteJSON(msg)
-// 			if err != nil {
-// 				if websocket.IsCloseError(err) {
-// 					fmt.Println("Closeing writer")
-// 					break out
-// 				}
-// 				log.Println("write:", err)
-// 			} else {
-// 				fmt.Printf("Write: %+v\n", msg)
-// 			}
-// 		case <-ticker.C:
-// 			fmt.Println("Tick")
-// 			if s.Closing {
-// 				break out
-// 			}
-// 		}
-// 	}
-// }

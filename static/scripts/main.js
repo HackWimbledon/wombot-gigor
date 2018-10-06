@@ -1,4 +1,3 @@
-
 window.addEventListener("load", () => {
   connectws();
   document.getElementById("send").onclick = send;
@@ -11,18 +10,6 @@ var print = function(message) {
   d.innerHTML = message;
   output.appendChild(d);
 };
-
-function updateBrains(igormsg) {
-    console.log("UpdateBrains")
-  brainmap = igormsg.resp;
-  var list = this.document.getElementById("brainrows");
-  rows = "";
-  Object.entries(brainmap).forEach(([bk, bv]) => {
-      console.log(bk,bv);
-    rows = rows + brainrow(bv);
-  });
-  list.innerHTML = rows;
-}
 
 function sendIgorCmd(cmd, params) {
   igorCmd = {};
@@ -48,7 +35,6 @@ function send(evt) {
 function connectws() {
   return fetch("/config").then(response => {
     response.json().then(config => {
-
       ws = new WebSocket(config.websocket);
       ws.onopen = function(evt) {
         print("OPEN");
@@ -60,10 +46,11 @@ function connectws() {
       };
       ws.onmessage = function(evt) {
         igorMsg = JSON.parse(evt.data);
-        print(igorMsg);
         if (igorMsg.cmd == "brains") {
           // Response contains current brains list
-          updateBrains(igorMsg)
+          updateBrains(igorMsg);
+        } else {
+          print("MESSAGE " + evt.data);
         }
       };
       ws.onerror = function(evt) {
@@ -74,10 +61,30 @@ function connectws() {
   });
 }
 
+function updateBrains(igormsg) {
+    console.log("UpdateBrains");
+    brainmap = igormsg.resp;
+    ids=[];
+    var list = this.document.getElementById("brainrows");
+    rows = "";
+    Object.entries(brainmap).forEach(([bk, bv]) => {
+      console.log(bk, bv);
+      rows = rows + brainrow(bv);
+      ids.push(bv.id)
+    });
+    list.innerHTML = rows;
+    for (var id of ids) {
+        button=this.document.getElementById("brainstatus."+id);
+        button.onclick=() => { sendIgorCmd("start", { "brain": id}) };
+    }
+  }
+
 function brainrow(brain) {
   return `<tr>
         <td>
-            <button id="brainstatus.${brain.id}" class="pure-button">Start</button>
+            <button id="brainstatus.${
+              brain.id
+            }" class="pure-button">Start</button>
         </td>
         <td>
             ${brain.name}

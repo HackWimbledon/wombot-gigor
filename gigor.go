@@ -61,16 +61,13 @@ func (s *IgorServer) run() {
 				close(client.sendChan)
 			}
 		case message := <-s.incoming:
-			// Process Message here
+			switch message.message.Command {
+			case "request":
+				if message.message.Args["for"] == "brains" {
+					message.client.sendChan <- newIgorMsg("brains", nil, s.brains.Brains)
+				}
+			}
 			fmt.Printf("%+v\n", message)
-			// for client := range s.clients {
-			// 	select {
-			// 	case client.send <- message:
-			// 	default:
-			// 		close(client.send)
-			// 		delete(s.clients, client)
-			// 	}
-			// }
 		}
 	}
 }
@@ -88,6 +85,14 @@ func (s *IgorServer) startServer() {
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
+}
+
+func newIgorMsg(cmd string, args map[string]string, response interface{}) *IgorMsg {
+	igormsg := new(IgorMsg)
+	igormsg.Command = cmd
+	igormsg.Args = args
+	igormsg.Response = response
+	return igormsg
 }
 
 func (s *IgorServer) getConfig(w http.ResponseWriter, r *http.Request) {
