@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -23,6 +24,7 @@ const (
 	maxMessageSize = 512
 )
 
+// IgorClient is a struct for holding client connections
 type IgorClient struct {
 	server   *IgorServer
 	conn     *websocket.Conn
@@ -43,37 +45,27 @@ func (c *IgorClient) readPump() {
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+
+	fmt.Println("Reading")
+
+out:
 	for {
 		igormsg := new(IgorMsg)
 		err := c.conn.ReadJSON(&igormsg)
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
+			switch err.(type) {
+			case *json.SyntaxError:
+				c.sendChan <- NewIgorMsg("Error", nil, err)
+			default:
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+					log.Printf("error: %v", err)
+				}
+				break out
 			}
-			break
 		}
-		c.server.incoming <- &IgorServerMsg{c, *igormsg}
+		c.server.incoming <- &IgorServerMsg{c, igormsg}
 	}
 }
-
-// func (s *IgorServer) readPump() {
-// 	go func() {
-// 		for {
-// 			select {
-// 			case msg := <-c.conn.readChan:
-// 				// This is an incoming message
-// 				switch msg.Command {
-// 				case "request":
-// 					fmt.Println("Request recieved")
-// 					if msg.Args["for"] == "brains" {
-// 						s.writeChan <- newIgorMsg("brains", nil, s.brains.Brains)
-// 					}
-// 				}
-// 			}
-
-// 		}
-// 	}()
-// }
 
 func (c *IgorClient) writePump() {
 	ticker := time.NewTicker(pingPeriod)

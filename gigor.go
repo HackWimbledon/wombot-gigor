@@ -13,17 +13,20 @@ func main() {
 	server.run()
 }
 
+//IgorServer is a struct for holding Igor server connections
 type IgorServer struct {
 	clients    map[*IgorClient]bool
 	register   chan *IgorClient
 	unregister chan *IgorClient
 	incoming   chan *IgorServerMsg
+	manager    chan *IgorServerMsg
 
 	router       *http.ServeMux
 	brains       *Brains
 	brainmanager *BrainManager
 }
 
+//NewIgorServer initialises brains are returns a working IgorServer
 func NewIgorServer() *IgorServer {
 	brains := new(Brains)
 	err := brains.Initialise()
@@ -33,20 +36,20 @@ func NewIgorServer() *IgorServer {
 	}
 
 	brainmanager := new(BrainManager)
-	err = brainmanager.Initialise(brains)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
 
-	return &IgorServer{
+	server := &IgorServer{
 		clients:      make(map[*IgorClient]bool),
 		register:     make(chan *IgorClient),
 		unregister:   make(chan *IgorClient),
 		incoming:     make(chan *IgorServerMsg),
+		manager:      make(chan *IgorServerMsg),
 		brains:       brains,
 		brainmanager: brainmanager,
 	}
+
+	brainmanager.Initialise(server)
+
+	return server
 }
 
 func (s *IgorServer) run() {
@@ -60,14 +63,20 @@ func (s *IgorServer) run() {
 				delete(s.clients, client)
 				close(client.sendChan)
 			}
+		case servermsg := <-s.manager:
+			for c := range s.clients {
+				c.sendChan <- servermsg.message
+			}
 		case message := <-s.incoming:
 			switch message.message.Command {
 			case "request":
 				if message.message.Args["for"] == "brains" {
-					message.client.sendChan <- newIgorMsg("brains", nil, s.brains.Brains)
+					message.client.sendChan <- NewIgorMsg("brains", nil, s.brains.Brains)
 				}
+			case "start":
+				brain := message.message.Args["brain"]
+				go s.brainmanager.StartBrain(brain)
 			}
-			fmt.Printf("%+v\n", message)
 		}
 	}
 }
@@ -87,7 +96,8 @@ func (s *IgorServer) startServer() {
 	}
 }
 
-func newIgorMsg(cmd string, args map[string]string, response interface{}) *IgorMsg {
+// NewIgorMsg creates a igor message for sending
+func NewIgorMsg(cmd string, args map[string]string, response interface{}) *IgorMsg {
 	igormsg := new(IgorMsg)
 	igormsg.Command = cmd
 	igormsg.Args = args
@@ -102,17 +112,20 @@ func (s *IgorServer) getConfig(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(config)
 }
 
+// Config is a struct for saving and JSON serialising config data
 type Config struct {
 	WebSocket string `json:"websocket"`
 }
 
+// IgorMsg is a struct for JSON serialised messages to and from clients
 type IgorMsg struct {
 	Command  string            `json:"cmd"`
 	Args     map[string]string `json:"args,omitempty"`
 	Response interface{}       `json:"resp,omitempty"`
 }
 
+// IgorServerMsg is an internal structure for associating a message with a client
 type IgorServerMsg struct {
 	client  *IgorClient
-	message IgorMsg
+	message *IgorMsg
 }

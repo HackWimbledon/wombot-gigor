@@ -1,14 +1,16 @@
+var term;
+
 window.addEventListener("load", () => {
+  term = new Terminal();
+  term.setOption("fontSize", 12);
+  term.open(document.getElementById("terminal"));
   connectws();
-  document.getElementById("send").onclick = send;
 });
 
 var ws;
 
 var print = function(message) {
-  var d = document.createElement("div");
-  d.innerHTML = message;
-  output.appendChild(d);
+  term.writeln(message);
 };
 
 function sendIgorCmd(cmd, params) {
@@ -47,6 +49,7 @@ function connectws() {
       ws.onmessage = function(evt) {
         igorMsg = JSON.parse(evt.data);
         if (igorMsg.cmd == "brains") {
+          console.log(igorMsg);
           // Response contains current brains list
           updateBrains(igorMsg);
         } else {
@@ -62,29 +65,31 @@ function connectws() {
 }
 
 function updateBrains(igormsg) {
-    console.log("UpdateBrains");
-    brainmap = igormsg.resp;
-    ids=[];
-    var list = this.document.getElementById("brainrows");
-    rows = "";
-    Object.entries(brainmap).forEach(([bk, bv]) => {
-      console.log(bk, bv);
-      rows = rows + brainrow(bv);
-      ids.push(bv.id)
-    });
-    list.innerHTML = rows;
-    for (var id of ids) {
-        button=this.document.getElementById("brainstatus."+id);
-        button.onclick=() => { sendIgorCmd("start", { "brain": id}) };
-    }
+  console.log("UPDATE BRAINS");
+  brainmap = igormsg.resp;
+  ids = [];
+  var list = this.document.getElementById("brainrows");
+  rows = "";
+  Object.entries(brainmap).forEach(([bk, bv]) => {
+    console.log(bk, bv);
+    rows = rows + brainrow(bv);
+    ids.push(bv.id);
+  });
+  list.innerHTML = rows;
+  for (var id of ids) {
+    button = this.document.getElementById("brainstatus." + id);
+    button.onclick = (evt) => {
+      sendIgorCmd("start", { brain: evt.target.getAttribute("data-arg1") });
+    };
   }
+}
 
 function brainrow(brain) {
   return `<tr>
         <td>
-            <button id="brainstatus.${
-              brain.id
-            }" class="pure-button">Start</button>
+            <button id="brainstatus.${brain.id}" data-arg1="${
+    brain.id
+  }" class="pure-button">Start</button>
         </td>
         <td>
             ${brain.name}
