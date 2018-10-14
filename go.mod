@@ -10,6 +10,7 @@ require (
 	github.com/julienschmidt/httprouter v0.0.0-20180715161854-348b672cd90d
 	github.com/karrick/godirwalk v1.7.3 // indirect
 	github.com/mattn/go-isatty v0.0.4 // indirect
+	github.com/mattn/go-shellwords v1.0.3
 	github.com/mdempsky/gocode v0.0.0-20180727200127-00e7f5ac290a // indirect
 	github.com/peterh/liner v1.1.0 // indirect
 	github.com/ramya-rao-a/go-outline v0.0.0-20170803230019-9e9d089bb61a // indirect

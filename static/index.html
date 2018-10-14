@@ -1,6 +1,4 @@
 <!doctype html>
-<link rel="stylesheet" href="node_modules/xterm/dist/xterm.css" />
-<script src="node_modules/xterm/dist/xterm.js"></script>
 <script src="scripts/main.js"></script>
 <meta charset="utf-8">
 <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css" integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w"
@@ -9,6 +7,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>G-Igor's WomBot Brain Manager</title>
 <h1>Igor's WomBot Lab</h1>
+<h2>WomBot Brain Status</h2>
+<div id="brainstate">No brains enabled</div>
+<h2>WomBot Brain Control</h2>
+<div id="braincontrol">No brain, no control
+    <p><input id="input" type="text" value="Hello world!">
+        <button id="send">Send</button>
+        </form>
+        <div id="output"></div>
+</div>
 <h2>Available WomBot Brains</h2>
 <div id="brainshelf">
     <table class="pure-table">
@@ -19,10 +26,7 @@
             </tr>
         </thead>
         <tbody id="brainrows">
-    
+
         </tbody>
     </table>
-</div>
-<h2>Console</h2>
-<div id="terminal"></div>
 </div>

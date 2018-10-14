@@ -50,3 +50,7 @@ func (brains *Brains) Initialise() (err error) {
 
 	return nil
 }
+
+func (brains *Brains) Get(id string) Brain {
+	return brains.Brains[id]
+}
